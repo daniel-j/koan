@@ -1,7 +1,6 @@
 import asyncdispatch
 import src/koan
-
-include src/koan/logger
+from src/koan/middleware import logger
 
 let app = Koan()
 
