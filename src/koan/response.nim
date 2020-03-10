@@ -3,7 +3,8 @@ import httpcore
 from streams import Stream
 from strutils import split
 from parseutils import parseInt
-from mimetypes import newMimetypes, getMimetype
+
+from util import getType
 
 # Headers
 proc get*(this: Response, field: string): auto =
@@ -33,16 +34,14 @@ proc `length=`*(this: Response, n:int) =
 
 # Type
 proc type*(this: Response): string =
-  let t = this.get("Content-Type")
-  return t.split(";", 1)[0]
+  result = this.get("Content-Type")
+  result = result.split(";", 1)[0]
 proc `type=`*(this: Response, value: string) =
-  let m = newMimetypes() # TODO: Reuse instance?
-  let t = m.getMimetype(value, default = "")
-  # TODO: Add charset support!
-  if t != "":
-    this.set("Content-Type", t)
-  else:
+  let t = getType(value)
+  if t == "":
     this.remove("Content-Type")
+  else:
+    this.set("Content-Type", t)
 
 # Body
 proc body*(this: Response): Body = this.body

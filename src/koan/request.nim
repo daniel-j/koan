@@ -1,5 +1,7 @@
 
 from parseutils import parseInt
+from util import parseContentType
+import tables
 
 proc `method`*(this: Request): string =
   return $this.req.reqMethod
@@ -8,6 +10,19 @@ proc length*(this: Request): int =
   result = -1
   if this.headers.hasKey("Content-Length"):
     discard parseInt(this.headers["Content-Length"], result)
+
+proc type*(this: Request): string =
+  if not this.req.headers.hasKey("Content-Type"):
+    return ""
+  return this.req.headers["Content-Type"].split(";", 1)[0]
+
+proc charset*(this: Request): string =
+  if not this.req.headers.hasKey("Content-Type"):
+    return
+  let contentType = parseContentType(this.req.headers["Content-Type"])
+  let params = contentType[1]
+  if params.hasKey("charset"):
+    return contentType[1]["charset"]
 
 proc protocol*(this: Request): string =
   return "protocol" # TODO
