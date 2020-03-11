@@ -8,6 +8,9 @@ import tables
 proc `method`*(this: Request): string =
   return $this.req.reqMethod
 
+proc originalUrl*(this: Request): string =
+  return $this.req.url
+
 proc length*(this: Request): int =
   result = -1
   if this.headers.hasKey("Content-Length"):
