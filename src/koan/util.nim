@@ -1,8 +1,10 @@
+import asyncdispatch
 import macros
 import mimetypes
 import strutils
 import tables
 import re
+import streams, asyncnet
 
 macro getName*(x: typed, default:string = ""): string =
   if x.kind == nnkCall and len(x) > 0 and x[0].kind == nnkSym:
@@ -97,3 +99,15 @@ proc bytes*(value: int64|float64|int, thousandsSeparator: string = "", unitSepar
     str = str.replace(formatThousandsRegExp, thousandsSeparator)
 
   return str & unitSeparator & newUnit
+
+proc pipe*(stream: Stream, socket: AsyncSocket) {.async.} =
+  const bufferSize = 1024
+  var buffer {.noinit.}: array[bufferSize, char]
+  while true:
+    let readBytes = readData(stream, addr(buffer[0]), bufferSize)
+    if readBytes == 0:
+      break
+    await socket.send(addr(buffer[0]), readBytes)
+    if readBytes < bufferSize:
+      break
+  socket.close()

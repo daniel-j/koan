@@ -24,11 +24,8 @@ proc respond(this: Koan, ctx: Context) {.async.} =
   if isNil(ctx.response.body):
     content = if ctx.response.message != "": ctx.response.message else: $(ctx.response.status)
     ctx.length = len(content)
-  else:
-    case ctx.response.body.kind:
-      of bkString:
-        content = ctx.response.body.strVal
-      else: discard
+  elif ctx.response.body.kind == bkString:
+    content = ctx.response.body.strVal
 
   echo "HTTP CODE: " & $ctx.response.status
   echo "HEADERS: " & $ctx.response.headers
@@ -39,8 +36,11 @@ proc respond(this: Koan, ctx: Context) {.async.} =
     msg.add(k & ": " & v & "\c\L")
   msg.add("\c\L")
   await ctx.socket.send(msg)
-  await ctx.socket.send(content)
-  ctx.socket.close()
+  if not isNil(ctx.response.body) and ctx.response.body.kind == bkStream:
+    await ctx.response.body.streamVal.pipe(ctx.socket)
+  elif content != "":
+    await ctx.socket.send(content)
+    ctx.socket.close()
 
 proc createContext(this: Koan, req: http.Request): Context =
   new(result)
