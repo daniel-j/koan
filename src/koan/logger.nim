@@ -23,9 +23,9 @@ proc logger*(): auto =
       "  ",
       styleBright, fgBlack, "<--", resetStyle,
       " ",
-      styleBright, ctx.request.method, resetStyle,
+      styleBright, ctx.method, resetStyle,
       " ",
-      styleBright, fgBlack, ctx.request.originalUrl
+      styleBright, fgBlack, ctx.originalUrl
     )
 
     await next()
@@ -48,9 +48,9 @@ proc logger*(): auto =
       "  ",
       styleBright, fgBlack, "-->", resetStyle,
       " ",
-      styleBright, ctx.request.method, resetStyle,
+      styleBright, ctx.method, resetStyle,
       " ",
-      styleBright, fgBlack, ctx.request.originalUrl, resetStyle,
+      styleBright, fgBlack, ctx.originalUrl, resetStyle,
       " ",
       statusColor, $ctx.status, resetStyle,
       " ",

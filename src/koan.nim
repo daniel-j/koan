@@ -8,11 +8,11 @@ import koan/util
 
 include koan/[types, compose]
 
-proc use*(this: Koan, name: string, callback: Middleware): auto {.discardable.} =
+proc use*(this: Koan, name: string, callback: Middleware): Koan {.discardable.} =
   echo "use ", if name != "": name else: "-"
   this.middleware.add(callback)
   return this
-proc use*(this: Koan, name: string, callback: MiddlewareSimple): auto {.discardable.} =
+proc use*(this: Koan, name: string, callback: MiddlewareSimple): Koan {.discardable.} =
   this.use(name, proc(ctx: Context, next: Next): auto = return callback(ctx))
 template use*(this: Koan, callback: Middleware): untyped =
   this.use(getName(callback), callback)
@@ -42,21 +42,14 @@ proc respond(this: Koan, ctx: Context) {.async.} =
   await ctx.socket.send(content)
   ctx.socket.close()
 
-proc createContext(this: Koan, req: http.Request): auto =
-  let ctx = Context()
-  let request = Request(req: req)
-  let response = Response(ctx)
-  ctx.app = this
-  ctx.request = request
-  ctx.response = response
-
-  request.url = $req.url
-  request.headers = req.headers
-
-  response.socket = req.client
-  response.headers = newHttpHeaders()
-  response.status = 404
-  return ctx
+proc createContext(this: Koan, req: http.Request): Context =
+  new(result)
+  result.app = this
+  result.request = Request(req: req, url: $req.url)
+  result.response = Response(result)
+  result.socket = req.client
+  result.status = 404
+  result.headers = newHttpHeaders()
 
 proc handleRequest(this: Koan, ctx: Context, fnMiddleware: Middleware) {.async.} =
   echo "Incoming request: " & $ctx.request.req

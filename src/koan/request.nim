@@ -1,15 +1,17 @@
-
-import parseutils # parseInt
-from util import parseContentType
-import strutils # split
+import parseutils
+import strutils
 import httpcore
 import tables
+
+from util import parseContentType
 
 proc `method`*(this: Request): string =
   return $this.req.reqMethod
 
 proc originalUrl*(this: Request): string =
   return $this.req.url
+
+proc headers*(this: Request): HttpHeaders = return this.req.headers
 
 proc length*(this: Request): int =
   result = -1

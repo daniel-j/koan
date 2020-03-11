@@ -7,16 +7,11 @@ import parseutils # parseInt
 from util import getType
 
 # Headers
-proc get*(this: Response, field: string): auto =
-  return this.headers[field]
-proc set*(this: Response, field: string, value: string) =
-  this.headers[field] = value
-proc append*(this: Response, field: string, value: string) =
-  this.headers.add(field, value)
-proc has*(this: Response, field: string): bool =
-  return this.headers.hasKey(field)
-proc remove*(this: Response, field: string) =
-  this.headers.del(field)
+proc get*(this: Response, field: string): auto = return this.headers[field]
+proc set*(this: Response, field: string, value: string) = this.headers[field] = value
+proc append*(this: Response, field: string, value: string) = this.headers.add(field, value)
+proc has*(this: Response, field: string): bool = return this.headers.hasKey(field)
+proc remove*(this: Response, field: string) = this.headers.del(field)
 
 # Length
 proc length*(this: Response): int =
@@ -30,7 +25,10 @@ proc length*(this: Response): int =
       else:
         result = -1
 proc `length=`*(this: Response, n:int) =
-  this.set("Content-Length", $(n))
+  if n >= 0:
+    this.set("Content-Length", $(n))
+  else:
+    this.remove("Content-Length")
 
 # Type
 proc type*(this: Response): string =
