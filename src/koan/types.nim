@@ -1,9 +1,9 @@
 
-from asyncdispatch import Future
-from streams import Stream
-from asynchttpserver import Request
-from httpcore import HttpHeaders
-from asyncnet import AsyncSocket
+import asyncdispatch # Future
+import streams # Stream
+import asynchttpserver # Request
+import httpcore # HttpHeaders
+import asyncnet # AsyncSocket
 
 type
   KoanException* = object of Exception
@@ -34,7 +34,8 @@ type
   Next* = proc(): Future[void] {.gcsafe.}
   Middleware* = proc (ctx: Context, next: Next = nil): Future[void] {.gcsafe.}
   MiddlewareSimple* = proc (ctx: Context): Future[void] {.gcsafe.}
-  MiddlewareList* = seq[Middleware]
 
   Koan* = ref object of RootObj
-    middleware: MiddlewareList
+    middleware: seq[Middleware]
+
+include request, response

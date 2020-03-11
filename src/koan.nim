@@ -5,7 +5,8 @@ from asyncnet import send, close
 from uri import `$`
 
 import koan/util
-include koan/[types, response, request, compose]
+
+include koan/[types, compose]
 
 proc use*(this: Koan, name: string, callback: Middleware): auto {.discardable.} =
   echo "use ", if name != "": name else: "-"
@@ -13,7 +14,6 @@ proc use*(this: Koan, name: string, callback: Middleware): auto {.discardable.} 
   return this
 proc use*(this: Koan, name: string, callback: MiddlewareSimple): auto {.discardable.} =
   this.use(name, proc(ctx: Context, next: Next): auto = return callback(ctx))
-
 template use*(this: Koan, callback: Middleware): untyped =
   this.use(getName(callback), callback)
 template use*(this: Koan, callback: MiddlewareSimple): untyped =

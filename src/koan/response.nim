@@ -1,8 +1,8 @@
 
 import httpcore
-from streams import Stream
-from strutils import split
-from parseutils import parseInt
+import streams # Stream
+import strutils # split
+import parseutils # parseInt
 
 from util import getType
 

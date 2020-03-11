@@ -1,6 +1,8 @@
 
-from parseutils import parseInt
+import parseutils # parseInt
 from util import parseContentType
+import strutils # split
+import httpcore
 import tables
 
 proc `method`*(this: Request): string =

@@ -1,10 +1,11 @@
 import asyncdispatch
+
 import src/koan
-from src/koan/middleware import logger
+import src/koan/logger
 
 let app = Koan()
 
-app.use(logger)
+app.use(logger())
 
 app.use(proc (ctx: Context) {.async.} =
   ctx.type = "html"

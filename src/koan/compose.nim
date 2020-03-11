@@ -1,7 +1,7 @@
 
 from system import newException
 
-proc compose*(middleware: MiddlewareList): auto =
+proc compose*(middleware: seq[Middleware]): Middleware =
   return proc (ctx: Context, next: Next = nil) {.async.} =
     var index = -1
     proc dispatch(i: int) {.async.} =

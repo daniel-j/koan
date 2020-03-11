@@ -1,11 +1,13 @@
-from mimetypes import newMimetypes, getMimetype
-import re
-import strutils
 import macros
+import mimetypes
+import strutils
 import tables
+import re
 
 macro getName*(x: typed, default:string = ""): string =
-  if x.kind == nnkSym:
+  if x.kind == nnkCall and len(x) > 0 and x[0].kind == nnkSym:
+    newLit x[0].getImpl[0].strVal
+  elif x.kind == nnkSym:
     newLit x.getImpl[0].strVal
   else:
     newLit default.strVal
@@ -44,3 +46,54 @@ proc parseContentType*(contentType: string): (string, Table[string, string]) {.g
 # echo parseContentType("text/html; charset=utf-8; asadsa=fdsfds; boundary=\"some\\ thing\"")
 
 
+proc humanizeNumber*(n: int|float, delimiter: string = ",", separator: string = "."): string =
+  # TODO: Test this
+  var num = ($n).split(".")
+  if len(num) > 1 and num[1] == "0":
+    num.del(1)
+  num[0] = num[0].replacef(re"""(\d)(?=(\d\d\d)+(?!\d))""", "$1" & delimiter)
+  return num.join(separator)
+
+
+const unitMap = {
+  "b":  1,
+  "kb": 1 shl 10,
+  "mb": 1 shl 20,
+  "gb": 1 shl 30,
+  "tb": 1 shl 40,
+  "pb": 1 shl 50
+}.toTable
+
+proc bytes*(value: int64|float64|int, thousandsSeparator: string = "", unitSeparator: string = "", decimalPlaces: int = 2, fixedDecimals: bool = false, unit: string = ""): string =
+  # TODO: Test this
+  let formatDecimalsRegExp = re"""(?:\.0*|(\.[^0]+)0+)$"""
+  let formatThousandsRegExp = re"""\B(?=(\d{3})+(?!\d))"""
+
+  let mag = abs(int(value))
+
+  var newUnit = unit # unit is immutable, have to store in var
+
+  if newUnit == "" or unitMap.hasKey(newUnit.toLower):
+    if mag >= unitMap["pb"]:
+      newUnit = "PB"
+    elif mag >= unitMap["tb"]:
+      newUnit = "TB"
+    elif mag >= unitMap["gb"]:
+      newUnit = "GB"
+    elif mag >= unitMap["mb"]:
+      newUnit = "MB"
+    elif mag >= unitMap["kb"]:
+      newUnit = "KB"
+    else:
+      newUnit = "B"
+
+  let val = float(value) / float(unitMap[newUnit.toLower])
+  var str = val.formatFloat(format=ffDecimal, precision=decimalPlaces)
+
+  if not fixedDecimals:
+    str = str.replacef(formatDecimalsRegExp, "$1")
+
+  if thousandsSeparator != "":
+    str = str.replace(formatThousandsRegExp, thousandsSeparator)
+
+  return str & unitSeparator & newUnit
