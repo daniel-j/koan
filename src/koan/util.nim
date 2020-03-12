@@ -103,11 +103,9 @@ proc bytes*(value: int64|float64|int, thousandsSeparator: string = "", unitSepar
 proc pipe*(stream: Stream, socket: AsyncSocket) {.async.} =
   const bufferSize = 1024
   var buffer {.noinit.}: array[bufferSize, char]
-  while true:
+  while not stream.atEnd:
     let readBytes = readData(stream, addr(buffer[0]), bufferSize)
     if readBytes == 0:
       break
     await socket.send(addr(buffer[0]), readBytes)
-    if readBytes < bufferSize:
-      break
   socket.close()
