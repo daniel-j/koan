@@ -19,9 +19,7 @@ proc length*(this: Request): int =
     discard parseInt(this.headers["Content-Length"], result)
 
 proc type*(this: Request): string =
-  if not this.req.headers.hasKey("Content-Type"):
-    return ""
-  return this.req.headers["Content-Type"].split(";", 1)[0]
+  return this.req.headers.getOrDefault("Content-Type").split(";", 1)[0]
 
 proc charset*(this: Request): string =
   if not this.req.headers.hasKey("Content-Type"):

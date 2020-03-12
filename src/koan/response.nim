@@ -3,6 +3,9 @@ import httpcore
 import streams # Stream
 import strutils # split
 import parseutils # parseInt
+import times
+import options
+export options.isNone, options.isSome, options.get
 
 from util import getType
 
@@ -13,7 +16,7 @@ proc append*(this: Response, field: string, value: string) = this.headers.add(fi
 proc has*(this: Response, field: string): bool = return this.headers.hasKey(field)
 proc remove*(this: Response, field: string) = this.headers.del(field)
 
-# Length
+# Content Length
 proc length*(this: Response): int =
   result = -1
   if this.headers.hasKey("Content-Length"):
@@ -24,13 +27,13 @@ proc length*(this: Response): int =
         result = len(this.body.strVal)
       else:
         result = -1
-proc `length=`*(this: Response, n:int) =
+proc `length=`*(this: Response, n:int|BiggestInt) =
   if n >= 0:
     this.set("Content-Length", $(n))
   else:
     this.remove("Content-Length")
 
-# Type
+# Content Type
 proc type*(this: Response): string =
   result = this.get("Content-Type")
   result = result.split(";", 1)[0]
@@ -40,6 +43,15 @@ proc `type=`*(this: Response, value: string) =
     this.remove("Content-Type")
   else:
     this.set("Content-Type", t)
+
+# Last Modified
+proc lastModified*(this: Response): Option[DateTime] =
+  if this.has("Last-Modified"):
+    return some(parse(this.get("Last-Modified"), "ddd, dd MMM yyyy HH:mm:ss 'GMT'", utc()))
+proc `lastModified=`*(this: Response, lastmod: Time|DateTime) =
+  this.set("Last-Modified", lastmod.format("ddd, dd MMM yyyy HH:mm:ss 'GMT'"))
+proc `lastModified=`*(this: Response, lastmod: type(nil)) =
+  this.remove("Last-Modified")
 
 # Body
 proc body*(this: Response): Body = this.body

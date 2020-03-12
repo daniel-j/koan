@@ -1,7 +1,6 @@
 
 import asyncdispatch # Future
 import streams # Stream
-import asynchttpserver # Request
 import httpcore # HttpHeaders
 import asyncnet # AsyncSocket
 
@@ -22,7 +21,7 @@ type
     of bkStream: streamVal: Stream
 
   Request = ref object of RootObj
-    req*: asynchttpserver.Request
+    req*: http.Request
     url*: string
 
   Response* = ref object of Request
