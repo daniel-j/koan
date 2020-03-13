@@ -43,3 +43,11 @@ proc origin*(this: Request): string =
 
 proc href*(this: Request): string =
   return "href" # TODO
+
+proc fresh*(this: Request): bool =
+  # TODO: Test this
+  result = false
+  if ["GET", "HEAD"].contains(this.method):
+    let s = Context(this).status
+    if (s >= 200 and s < 300) or s == 304:
+      return fresh(this.headers, Response(this).headers)

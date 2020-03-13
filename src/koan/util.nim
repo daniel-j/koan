@@ -5,6 +5,7 @@ import strutils
 import tables
 import re
 import streams, asyncnet
+import httpcore
 import times
 
 macro getName*(x: typed, default:string = ""): string =
@@ -115,3 +116,58 @@ proc parseLastModified*(header: string): DateTime|Time =
   return parse(header, "ddd, dd MMM yyyy HH:mm:ss 'GMT'", utc())
 proc formatLastModified*(lastmod: DateTime|Time): string =
   return format(lastmod, "ddd, dd MMM yyyy HH:mm:ss 'GMT'")
+
+proc parseTokenList(str: string): seq[string] =
+  var endPos = 0
+  var startPos = 0
+  for i in 0..<len(str):
+    case ord str[i]
+      of 0x20:
+        if startPos == endPos:
+          startPos = i + 1
+          endPos = startPos
+      of 0x2C:
+        result.add(str[startPos..endPos])
+        startPos = i + 1
+        endPos = startPos
+      else:
+        endPos = i + 1
+  result.add(str[startPos..endPos])
+
+proc fresh*(reqHeaders: HttpHeaders, resHeaders: HttpHeaders): bool =
+  # TODO: Test this
+  result = false
+  let CACHE_CONTROL_NO_CACHE_REGEXP = re"""(?:^|,)\s*?no-cache\s*?(?:,|$)"""
+
+  if not reqHeaders.hasKey("if-modified-since") and not reqHeaders.hasKey("if-none-match"):
+    return
+
+  let modifiedSince = reqHeaders["if-modified-since"]
+  let noneMatch = reqHeaders["if-none-match"]
+
+  let cacheControl = reqHeaders["cache-control"]
+  if cacheControl != "" and cacheControl.match(CACHE_CONTROL_NO_CACHE_REGEXP):
+    return
+
+  if reqHeaders.hasKey("if-none-match") and noneMatch != "*":
+    if resHeaders.hasKey("etag"):
+      return
+    let etag = resHeaders["etag"]
+    var etagStale = true
+    let matches = parseTokenList(noneMatch)
+    for i, match in matches:
+      if match == etag or match == "W/" & etag or match & "W/" == etag:
+        etagStale = false
+        break
+
+    if etagStale:
+      return
+
+  if reqHeaders.hasKey("if-modified-since"):
+    if not resHeaders.hasKey("last-modified"):
+      return
+    let lastModified = resHeaders["last-modified"]
+    if parseLastModified(lastModified) <= parseLastModified(modifiedSince):
+      return
+
+  return true
