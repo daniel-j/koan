@@ -45,7 +45,9 @@ proc respond(this: Koan, ctx: Context) {.async.} =
 proc createContext(this: Koan, req: http.Request): Context =
   new(result)
   result.app = this
-  result.request = Request(req: req, url: $req.url)
+  result.request = Request(result)
+  result.request.req = req
+  result.request.url = $req.url
   result.response = Response(result)
   result.socket = req.client
   result.status = 404
