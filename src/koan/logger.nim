@@ -3,9 +3,9 @@ from times import cpuTime
 from math import round
 from util import humanizeNumber, bytes
 import terminal
+import httpcore
 
 import ../koan
-
 
 proc time(start: float): string =
   let delta = cpuTime() - start
@@ -23,7 +23,7 @@ proc logger*(): auto =
       "  ",
       styleBright, fgBlack, "<--", resetStyle,
       " ",
-      styleBright, ctx.method, resetStyle,
+      styleBright, $ctx.method, resetStyle,
       " ",
       styleBright, fgBlack, ctx.originalUrl
     )
@@ -48,7 +48,7 @@ proc logger*(): auto =
       "  ",
       styleBright, fgBlack, "-->", resetStyle,
       " ",
-      styleBright, ctx.method, resetStyle,
+      styleBright, $ctx.method, resetStyle,
       " ",
       styleBright, fgBlack, ctx.originalUrl, resetStyle,
       " ",

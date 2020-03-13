@@ -1,17 +1,24 @@
+import uri
 import parseutils
 import strutils
 import httpcore
 import tables
 
-from util import parseContentType
-
-proc `method`*(this: Request): string =
-  return $this.req.reqMethod
-
-proc originalUrl*(this: Request): string =
-  return $this.req.url
+import util
 
 proc headers*(this: Request): HttpHeaders = return this.req.headers
+
+proc url*(this: Request): string =
+  return $this.req.url
+
+proc `url=`*(this: Request, url: string) =
+  this.req.url = parseUri(url)
+
+proc `method`*(this: Request): HttpMethod =
+  return this.req.reqMethod
+
+proc originalUrl*(this: Request): string =
+  return this.originalUrl
 
 proc length*(this: Request): int =
   result = -1
@@ -47,7 +54,16 @@ proc href*(this: Request): string =
 proc fresh*(this: Request): bool =
   # TODO: Test this
   result = false
-  if ["GET", "HEAD"].contains(this.method):
+  if [HttpGet, HttpHead].contains(this.method):
     let s = Context(this).status
     if (s >= 200 and s < 300) or s == 304:
       return fresh(this.headers, Response(this).headers)
+
+proc stale*(this: Request): bool =
+  return not this.fresh
+
+proc idempotent*(this: Request): bool =
+  return [HttpGet, HttpHead, HttpPut, HttpDelete, HttpOptions, HttpTrace].contains(this.method)
+
+proc get*(this: Request, field: string): string =
+  return this.headers.getOrDefault(field)

@@ -22,7 +22,7 @@ type
 
   Request = ref object of RootObj
     req*: http.Request
-    url*: string
+    originalUrl: string
 
   Response* = ref object of Request
     socket*: AsyncSocket
@@ -35,5 +35,6 @@ type
     app*: Koan
     request*: Request
     response*: Response
+    respond*: bool
 
 include request, response, context

@@ -110,7 +110,6 @@ proc pipe*(stream: Stream, socket: AsyncSocket) {.async.} =
     if readBytes == 0:
       break
     await socket.send(addr(buffer[0]), readBytes)
-  socket.close()
 
 proc parseLastModified*(header: string): DateTime|Time =
   return parse(header, "ddd, dd MMM yyyy HH:mm:ss 'GMT'", utc())
