@@ -5,6 +5,7 @@ import strutils
 import tables
 import re
 import streams, asyncnet
+import times
 
 macro getName*(x: typed, default:string = ""): string =
   if x.kind == nnkCall and len(x) > 0 and x[0].kind == nnkSym:
@@ -109,3 +110,8 @@ proc pipe*(stream: Stream, socket: AsyncSocket) {.async.} =
       break
     await socket.send(addr(buffer[0]), readBytes)
   socket.close()
+
+proc parseLastModified*(header: string): DateTime|Time =
+  return parse(header, "ddd, dd MMM yyyy HH:mm:ss 'GMT'", utc())
+proc formatLastModified*(lastmod: DateTime|Time): string =
+  return format(lastmod, "ddd, dd MMM yyyy HH:mm:ss 'GMT'")

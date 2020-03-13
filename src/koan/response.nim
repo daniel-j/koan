@@ -47,9 +47,9 @@ proc `type=`*(this: Response, value: string) =
 # Last Modified
 proc lastModified*(this: Response): Option[DateTime] =
   if this.has("Last-Modified"):
-    return some(parse(this.get("Last-Modified"), "ddd, dd MMM yyyy HH:mm:ss 'GMT'", utc()))
-proc `lastModified=`*(this: Response, lastmod: Time|DateTime) =
-  this.set("Last-Modified", lastmod.format("ddd, dd MMM yyyy HH:mm:ss 'GMT'"))
+    return some(parseLastModified(this.get("Last-Modified")))
+proc `lastModified=`*(this: Response, lastmod: DateTime|Time) =
+  this.set("Last-Modified", formatLastModified(lastmod))
 proc `lastModified=`*(this: Response, lastmod: type(nil)) =
   this.remove("Last-Modified")
 
