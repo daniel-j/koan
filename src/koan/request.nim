@@ -55,7 +55,7 @@ proc fresh*(this: Request): bool =
   # TODO: Test this
   result = false
   if [HttpGet, HttpHead].contains(this.method):
-    let s = Context(this).status
+    let s = Response(this).status
     if (s >= 200 and s < 300) or s == 304:
       return fresh(this.headers, Response(this).headers)
 

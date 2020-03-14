@@ -11,11 +11,11 @@ type
   Middleware* = proc (ctx: Context, next: Next = nil): Future[void] {.gcsafe.}
   MiddlewareSimple* = proc (ctx: Context): Future[void] {.gcsafe.}
 
-  Koan* = ref object of RootObj
+  Koan* = ref object
     middleware: seq[Middleware]
 
   BodyKind = enum bkString, bkStream
-  Body = ref object of RootObj
+  Body = ref object
     case kind: BodyKind
     of bkString: strVal: string
     of bkStream: streamVal: Stream

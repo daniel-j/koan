@@ -102,14 +102,16 @@ proc bytes*(value: int64|float64|int, thousandsSeparator: string = "", unitSepar
 
   return str & unitSeparator & newUnit
 
-proc pipe*(stream: Stream, socket: AsyncSocket) {.async.} =
-  const bufferSize = 1024
-  var buffer {.noinit.}: array[bufferSize, char]
+proc pipe*(stream: Stream, socket: AsyncSocket, bufferSize: int = 1024) {.async.} =
+  let buffer = alloc(bufferSize)
+  defer:
+    dealloc(buffer)
+
   while not stream.atEnd:
-    let readBytes = readData(stream, addr(buffer[0]), bufferSize)
+    let readBytes = readData(stream, buffer, bufferSize)
     if readBytes == 0:
       break
-    await socket.send(addr(buffer[0]), readBytes)
+    await socket.send(buffer, readBytes)
 
 proc parseLastModified*(header: string): DateTime|Time =
   return parse(header, "ddd, dd MMM yyyy HH:mm:ss 'GMT'", utc())
