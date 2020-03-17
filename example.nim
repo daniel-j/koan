@@ -14,7 +14,7 @@ app.use(proc (ctx: Context) {.async.} =
   # ctx.type= sets response content-type, in this case to text/html
   #ctx.type = "html"
 
-  # ctx.body= supports strings and streams
+  # ctx.body= supports strings, streams and asyncfiles
   #ctx.body = "<!doctype html><h1>Hello World</h1>"
   discard await sendfile(ctx, "example.html")
 )

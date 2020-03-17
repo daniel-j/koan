@@ -58,13 +58,13 @@ proc body*(this: Response): Body = this.body
 proc `body=`*(this: Response, val: string) =
   this.body = Body(kind: bkString, strVal: val)
   this.length = len(val)
-proc `body=`*(this: Response, val:Stream) =
-  if isNil(val):
-    this.body = nil
-    this.length = -1
-    this.remove("Content-Length")
-    this.remove("Content-Type")
-    this.remove("Transfer-Encoding")
-  else:
-    this.body = Body(kind: bkStream, streamVal: val)
-    this.length = -1
+proc `body=`*(this: Response, val: type(nil)) =
+  this.body = nil
+  this.remove("Content-Length")
+  this.remove("Content-Type")
+  this.remove("Transfer-Encoding")
+proc `body=`*(this: Response, val: Stream) =
+  this.body = Body(kind: bkStream, streamVal: val)
+proc `body=`*(this: Response, val: AsyncFile) =
+  this.body = Body(kind: bkAsyncFile, asyncFileVal: val)
+  this.length = getFileSize(val)

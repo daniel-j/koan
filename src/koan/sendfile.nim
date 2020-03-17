@@ -1,6 +1,6 @@
 import asyncdispatch
 import os
-import streams
+import asyncfile
 import httpcore
 
 import ../koan
@@ -22,4 +22,4 @@ proc sendfile*(ctx: Context, path: string): Future[FileInfo] {.async.} =
   if ctx.request.method == HttpHead:
     return
   
-  ctx.body = openFileStream(path)
+  ctx.body = openAsync(path)

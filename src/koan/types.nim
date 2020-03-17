@@ -3,6 +3,7 @@ import asyncdispatch # Future
 import streams # Stream
 import httpcore # HttpHeaders
 import asyncnet # AsyncSocket
+import asyncfile # AsyncFile
 
 type
   KoanException* = object of Exception
@@ -14,11 +15,12 @@ type
   Koan* = ref object
     middleware: seq[Middleware]
 
-  BodyKind = enum bkString, bkStream
+  BodyKind = enum bkString, bkStream, bkAsyncFile
   Body = ref object
     case kind: BodyKind
     of bkString: strVal: string
     of bkStream: streamVal: Stream
+    of bkAsyncFile: asyncFileVal: AsyncFile
 
   Request = ref object of RootObj
     req*: http.Request
