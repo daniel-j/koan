@@ -4,7 +4,7 @@ import mimetypes
 import strutils
 import tables
 import re
-import streams, asyncnet
+import streams, asyncfile, asyncnet
 import httpcore
 import times
 
@@ -108,10 +108,23 @@ proc pipe*(stream: Stream, socket: AsyncSocket, bufferSize: int = 1024) {.async.
     dealloc(buffer)
 
   while not stream.atEnd:
-    let readBytes = readData(stream, buffer, bufferSize)
+    let readBytes = stream.readData(buffer, bufferSize)
     if readBytes == 0:
       break
     await socket.send(buffer, readBytes)
+  stream.close()
+
+proc pipe*(file: AsyncFile, socket: AsyncSocket, bufferSize: int = 1024) {.async.} =
+  let buffer = alloc(bufferSize)
+  defer:
+    dealloc(buffer)
+
+  while true:
+    let readBytes = await file.readBuffer(buffer, bufferSize)
+    if readBytes == 0:
+      break
+    await socket.send(buffer, readBytes)
+  file.close()
 
 proc parseLastModified*(header: string): DateTime|Time =
   return parse(header, "ddd, dd MMM yyyy HH:mm:ss 'GMT'", utc())

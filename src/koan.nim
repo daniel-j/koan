@@ -49,7 +49,8 @@ proc respond(this: Koan, ctx: Context) {.async.} =
   if ctx.method != HttpHead:
     if not isNil(ctx.response.body) and ctx.response.body.kind == bkStream:
       await ctx.response.body.streamVal.pipe(ctx.socket)
-      ctx.response.body.streamVal.close()
+    elif not isNil(ctx.response.body) and ctx.response.body.kind == bkAsyncFile:
+      await ctx.response.body.asyncFileVal.pipe(ctx.socket)
     elif content != "":
       await ctx.socket.send(content)
     ctx.socket.close()
