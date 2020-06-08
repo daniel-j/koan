@@ -8,12 +8,17 @@ import koan/util
 
 include koan/[types, compose]
 
+proc convertMiddleware*(callback: MiddlewareSimple): Middleware =
+  return proc(ctx: Context, next: Next): auto = return callback(ctx)
+proc convertMiddleware*(callback: Middleware): Middleware =
+  return callback
+
 proc use*(this: Koan, name: string, callback: Middleware): Koan {.discardable.} =
   echo "use ", if name != "": name else: "-"
   this.middleware.add(callback)
   return this
 proc use*(this: Koan, name: string, callback: MiddlewareSimple): Koan {.discardable.} =
-  this.use(name, proc(ctx: Context, next: Next): auto = return callback(ctx))
+  this.use(name, convertMiddleware(callback))
 template use*(this: Koan, callback: Middleware): untyped =
   this.use(getName(callback), callback)
 template use*(this: Koan, callback: MiddlewareSimple): untyped =
@@ -32,7 +37,7 @@ proc respond(this: Koan, ctx: Context) {.async.} =
 
   echo "HTTP CODE: " & $ctx.response.status
   echo "HEADERS: " & $ctx.response.headers
-  if content != "" and ctx.`method` != HttpHead:
+  if content != "" and ctx.method != HttpHead:
     echo "BODY: " & content
   
   var msg = "HTTP/1.1 " & $HttpCode(ctx.response.status) & "\c\L"
@@ -41,9 +46,10 @@ proc respond(this: Koan, ctx: Context) {.async.} =
   msg.add("\c\L")
   await ctx.socket.send(msg)
 
-  if ctx.`method` != HttpHead:
+  if ctx.method != HttpHead:
     if not isNil(ctx.response.body) and ctx.response.body.kind == bkStream:
       await ctx.response.body.streamVal.pipe(ctx.socket)
+      ctx.response.body.streamVal.close()
     elif content != "":
       await ctx.socket.send(content)
     ctx.socket.close()
