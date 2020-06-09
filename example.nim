@@ -5,7 +5,7 @@ import src/koan/logger
 import src/koan/sendfile
 import src/koan/router
 
-let app = newKoan(proxy=true)
+let app = newKoan(proxy = true)
 
 app.use(logger())
 

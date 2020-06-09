@@ -8,7 +8,7 @@ import streams, asyncfile, asyncnet
 import httpcore
 import times
 
-macro getName*(x: typed, default:string = ""): string =
+macro getName*(x: typed, default: string = ""): string =
   if x.kind == nnkCall and len(x) > 0 and x[0].kind == nnkSym:
     newLit x[0].getImpl[0].strVal
   elif x.kind == nnkSym:
@@ -37,7 +37,7 @@ proc parseContentType*(contentType: string): (string, Table[string, string]) {.g
   result[0] = mime
   if index != -1:
     while true:
-      var matches:array[2, string]
+      var matches: array[2, string]
       let length = contentType.matchLen(PARAM_REGEXP, matches, index)
       if length <= 0: break
       index.inc(length)
@@ -50,7 +50,8 @@ proc parseContentType*(contentType: string): (string, Table[string, string]) {.g
 # echo parseContentType("text/html; charset=utf-8; asadsa=fdsfds; boundary=\"some\\ thing\"")
 
 
-proc humanizeNumber*(n: int|float, delimiter: string = ",", separator: string = "."): string =
+proc humanizeNumber*(n: int|float, delimiter: string = ",",
+    separator: string = "."): string =
   # TODO: Test this
   var num = ($n).split(".")
   if len(num) > 1 and num[1] == "0":
@@ -60,7 +61,7 @@ proc humanizeNumber*(n: int|float, delimiter: string = ",", separator: string = 
 
 
 const unitMap = {
-  "b":  1,
+  "b": 1,
   "kb": 1 shl 10,
   "mb": 1 shl 20,
   "gb": 1 shl 30,
@@ -68,7 +69,9 @@ const unitMap = {
   "pb": 1 shl 50
 }.toTable
 
-proc bytes*(value: int64|float64|int, thousandsSeparator: string = "", unitSeparator: string = "", decimalPlaces: int = 2, fixedDecimals: bool = false, unit: string = ""): string =
+proc bytes*(value: int64|float64|int, thousandsSeparator: string = "",
+    unitSeparator: string = "", decimalPlaces: int = 2,
+    fixedDecimals: bool = false, unit: string = ""): string =
   # TODO: Test this
   let formatDecimalsRegExp = re"""(?:\.0*|(\.[^0]+)0+)$"""
   let formatThousandsRegExp = re"""\B(?=(\d{3})+(?!\d))"""
@@ -92,7 +95,7 @@ proc bytes*(value: int64|float64|int, thousandsSeparator: string = "", unitSepar
       newUnit = "B"
 
   let val = float(value) / float(unitMap[newUnit.toLower])
-  var str = val.formatFloat(format=ffDecimal, precision=decimalPlaces)
+  var str = val.formatFloat(format = ffDecimal, precision = decimalPlaces)
 
   if not fixedDecimals:
     str = str.replacef(formatDecimalsRegExp, "$1")

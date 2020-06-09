@@ -18,7 +18,7 @@ proc newKoan*(
   subdomainOffset: int = 2,
   proxyIpHeader: string = "X-Forwarded-For",
   maxIpsCount: int = 0,
-  env:string = "development"
+  env: string = "development"
 ): Koan =
   new(result)
   result.proxy = proxy
@@ -41,7 +41,8 @@ proc respond(this: Koan, ctx: Context) {.async.} =
 
   var content = ""
   if isNil(ctx.response.body):
-    content = if ctx.response.message != "": ctx.response.message else: $(ctx.response.status)
+    content = if ctx.response.message != "": ctx.response.message else: $(
+        ctx.response.status)
     ctx.length = len(content)
   elif ctx.response.body.kind == bkString:
     content = ctx.response.body.strVal
@@ -50,7 +51,7 @@ proc respond(this: Koan, ctx: Context) {.async.} =
   echo "HEADERS: " & $ctx.response.headers
   if content != "" and ctx.method != HttpHead:
     echo "BODY: " & content
-  
+
   var msg = "HTTP/1.1 " & $ctx.response.status & "\c\L"
   for k, v in ctx.response.headers:
     msg.add(k & ": " & v & "\c\L")
