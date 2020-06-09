@@ -1,6 +1,6 @@
 # converted from https://github.com/pillarjs/path-to-regexp
 
-import nre except toSeq
+import regex
 import strutils
 
 type

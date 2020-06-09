@@ -2,13 +2,20 @@ import httpcore
 import tables
 import asyncdispatch
 import strutils
-import nre except toSeq
+import regex
 from uri import decodeUrl
 
 import ./middleware
 import ./path_to_regexp
 
 type
+  RouterContext* = ref object of Context
+    captures*: seq[string]
+    params*: Table[string, string]
+    routerName*: string
+
+  ParamMiddleware = proc (name: string, ctx: Context): Middleware
+
   LayerOptions = object
     `end`: bool
     name: string
@@ -21,18 +28,23 @@ type
     name: string
     path: string
     methods: seq[HttpMethod]
-    options: LayerOptions
+    opts: LayerOptions
     paramNames: seq[Token]
     stack: seq[Middleware]
     regexp: Regex
 
+  Matched = object
+    path: seq[Layer]
+    pathAndMethod: seq[Layer]
+    route: bool
+
   Router* = ref object
     stack: seq[Layer]
-    params: Table[string, string]
+    params: Table[string, ParamMiddleware]
 
 proc newLayer(path: string, methods: seq[HttpMethod], middlewares: seq[Middleware], opts: LayerOptions = LayerOptions()): Layer =
-  result.options = opts
-  result.name = result.options.name
+  result.opts = opts
+  result.name = result.opts.name
   result.stack = middlewares
 
   for i in 0 ..< methods.len:
@@ -43,14 +55,26 @@ proc newLayer(path: string, methods: seq[HttpMethod], middlewares: seq[Middlewar
   result.path = path
   result.regexp = pathToRegexp(path, result.paramNames.addr)
 
-proc params(this: Layer, path: string): Table[string, string] =
-  var i = 0
-  for match in path.findIter(this.regexp):
-    if i < this.paramNames.len:
-      let token = this.paramNames[i]
-      inc(i)
-      result[token.name] = decodeUrl(match.captures[0], false)
+proc match(this: Layer, path: string): bool = path.match(this.regexp)
 
+proc params(this: Layer, path: string, captures: seq[string], existingParams: Table[string, string] = initTable[string, string]()): Table[string, string] =
+  result = existingParams
+  for i, c in captures:
+    if i < this.paramNames.len:
+      result[this.paramNames[i].name] = decodeUrl(c, false)
+
+proc captures(this: Layer, path: string): seq[string] =
+  if not this.opts.ignoreCaptures:
+    var m: RegexMatch
+    if path.match(this.regexp, m):
+      for i in 0 ..< m.groupsCount():
+        result.add(path[m.group(i)[0]])
+
+proc param(this: Layer, param: string, fn: ParamMiddleware): Layer =
+  result = this
+  let stack = this.stack
+  let params = this.paramNames
+  # let middleware = proc (ctx: Context): auto = fn(ctx.params[param], ctx)
 
 proc register(this: Router, path: string, methods: seq[HttpMethod], middlewares: seq[Middleware], opts: LayerOptions = LayerOptions()): Router {.discardable.} =
   result = this
@@ -78,3 +102,22 @@ setMethodVerb(delete, HttpDelete)
 proc routes*(this: Router): Middleware =
   return proc (ctx: Context) {.async.} =
     echo "MIDDLEWARE"
+
+proc middleware*(this: Router): auto = this.routes()
+
+proc match*(this: Router, path: string, `method`: HttpMethod): Matched =
+  let layers = this.stack
+
+  for layer in layers:
+    if layer.match(path):
+      result.path.add(layer)
+
+      if layer.methods.len == 0 or layer.methods.find(`method`) != -1:
+        result.pathAndMethod.add(layer)
+        if layer.methods.len != 0: result.route = true
+
+proc param*(this: Router, param: string, middleware: ParamMiddleware): Router =
+  result = this
+  this.params[param] = middleware
+  for layer in this.stack:
+    discard layer.param(param, middleware)
