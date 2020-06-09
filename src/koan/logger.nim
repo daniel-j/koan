@@ -5,7 +5,8 @@ from util import humanizeNumber, bytes
 import terminal
 import httpcore
 
-import ../koan
+import ./middleware
+import ./statuses
 
 proc time(start: float): string =
   let delta = cpuTime() - start
@@ -14,9 +15,8 @@ proc time(start: float): string =
   else:
     result = humanizeNumber(round(delta)) & " s"
 
-
 proc logger*(): auto =
-  return proc (ctx: Context, next: Next) {.async.} =
+  return proc (ctx: Context) {.async.} =
     let start = cpuTime()
 
     styledEcho(
@@ -28,9 +28,9 @@ proc logger*(): auto =
       styleBright, fgBlack, ctx.originalUrl
     )
 
-    await next()
+    await ctx.next()
 
-    let statusColor = case int(ctx.status / 100):
+    let statusColor = case int(ctx.status.int / 100):
       of 7: fgMagenta
       of 5: fgRed
       of 4: fgYellow
@@ -40,7 +40,7 @@ proc logger*(): auto =
       else: fgYellow
 
     let length =
-      if ctx.status in [204, 205, 304]: ""
+      if ctx.status.isEmpty: ""
       elif ctx.length == -1: "-"
       else: bytes(ctx.length)
 

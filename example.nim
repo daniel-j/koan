@@ -5,14 +5,16 @@ import src/koan/logger
 import src/koan/sendfile
 import src/koan/router
 
-let app = Koan()
+let app = newKoan(proxy=true)
 
 app.use(logger())
 
 let myRouter = Router()
 
-myRouter.get("/hello/:world", proc (ctx: Context) {.async.} =
-  #ctx.status = 200
+# echo Http308
+
+myRouter.get("/", proc (ctx: Context) {.async.} =
+  ctx.status = Http200
 
   # ctx.type= sets response content-type, in this case to text/html
   #ctx.type = "html"

@@ -4,24 +4,35 @@ from asynchttpserver as http import nil
 from asyncnet import send, close
 from uri import `$`
 
-import koan/util
+import koan/[request, response, context, middleware, app, util, compose]
 
-include koan/[types, compose]
+export middleware, context, response, request, app
+export httpcore
 
-proc convertMiddleware*(callback: MiddlewareSimple): Middleware =
-  return proc(ctx: Context, next: Next): auto = return callback(ctx)
-proc convertMiddleware*(callback: Middleware): Middleware =
-  return callback
+type
+  Koan* = ref object of App
+    middleware*: seq[Middleware]
+
+proc newKoan*(
+  proxy: bool = false,
+  subdomainOffset: int = 2,
+  proxyIpHeader: string = "X-Forwarded-For",
+  maxIpsCount: int = 0,
+  env:string = "development"
+): Koan =
+  new(result)
+  result.proxy = proxy
+  result.subdomainOffset = subdomainOffset
+  result.proxyIpHeader = proxyIpHeader
+  result.maxIpsCount = maxIpsCount
+  result.env = env
+
 
 proc use*(this: Koan, name: string, callback: Middleware): Koan {.discardable.} =
   echo "use ", if name != "": name else: "-"
   this.middleware.add(callback)
   return this
-proc use*(this: Koan, name: string, callback: MiddlewareSimple): Koan {.discardable.} =
-  this.use(name, convertMiddleware(callback))
 template use*(this: Koan, callback: Middleware): untyped =
-  this.use(getName(callback), callback)
-template use*(this: Koan, callback: MiddlewareSimple): untyped =
   this.use(getName(callback), callback)
 
 proc respond(this: Koan, ctx: Context) {.async.} =
@@ -40,7 +51,7 @@ proc respond(this: Koan, ctx: Context) {.async.} =
   if content != "" and ctx.method != HttpHead:
     echo "BODY: " & content
   
-  var msg = "HTTP/1.1 " & $HttpCode(ctx.response.status) & "\c\L"
+  var msg = "HTTP/1.1 " & $ctx.response.status & "\c\L"
   for k, v in ctx.response.headers:
     msg.add(k & ": " & v & "\c\L")
   msg.add("\c\L")
@@ -57,13 +68,13 @@ proc respond(this: Koan, ctx: Context) {.async.} =
 
 proc createContext(this: Koan, req: http.Request): Context =
   new(result)
-  result.app = this
+  result.app = App(this)
   result.request = Request(result)
   result.request.req = req
   result.request.originalUrl = $req.url
   result.response = Response(result)
   result.socket = req.client
-  result.status = 404
+  result.status = Http404
   result.headers = newHttpHeaders()
   result.respond = true
 
@@ -71,7 +82,7 @@ proc handleRequest(this: Koan, ctx: Context, fnMiddleware: Middleware) {.async.}
   echo "Incoming request: " & $ctx.request.req
   try:
     await fnMiddleware(ctx)
-  except KoanException:
+  except CatchableError:
     echo "Middleware exception:"
     echo getCurrentException().msg
   await this.respond(ctx)

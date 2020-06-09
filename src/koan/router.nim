@@ -2,14 +2,13 @@ import httpcore
 import tables
 import asyncdispatch
 import strutils
-
-import ../koan
-import path_to_regexp
 import nre except toSeq
 from uri import decodeUrl
 
-type
+import ./middleware
+import ./path_to_regexp
 
+type
   LayerOptions = object
     `end`: bool
     name: string
@@ -59,19 +58,16 @@ proc register(this: Router, path: string, methods: seq[HttpMethod], middlewares:
   let route = newLayer(path, methods, middlewares, opts)
   # echo "params: ", route.params("/hello/12%20+hello")
 
-
 template setMethodVerb(methodName: untyped, `method`: HttpMethod) =
-  proc `methodName`*(this: Router, name: string, path: string, middlewares: varargs[Middleware, convertMiddleware]): Router {.discardable.} =
+  proc `methodName`*(this: Router, name: string, path: string, middleware: varargs[Middleware, convertMiddleware]): Router {.discardable.} =
     result = this
-    if len(middlewares) == 0: return
-    for m in middlewares:
-      this.register(path, @[`method`], @[m], LayerOptions(name: name))
+    if len(middleware) == 0: return
+    this.register(path, @[`method`], @middleware, LayerOptions(name: name))
 
-  proc `methodName`*(this: Router, path: string, middlewares: varargs[Middleware, convertMiddleware]): Router {.discardable.} =
+  proc `methodName`*(this: Router, path: string, middleware: varargs[Middleware, convertMiddleware]): Router {.discardable.} =
     result = this
-    if len(middlewares) == 0: return
-    for m in middlewares:
-      this.register(path, @[`method`], @[m])
+    if len(middleware) == 0: return
+    this.register(path, @[`method`], @middleware)
 
 setMethodVerb(get, HttpGet)
 setMethodVerb(post, HttpPost)
@@ -80,5 +76,5 @@ setMethodVerb(delete, HttpDelete)
 
 
 proc routes*(this: Router): Middleware =
-  return proc (ctx: Context, next: Next) {.async.} =
+  return proc (ctx: Context) {.async.} =
     echo "MIDDLEWARE"

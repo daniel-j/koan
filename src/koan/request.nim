@@ -3,8 +3,14 @@ import parseutils
 import strutils
 import httpcore
 import tables
+from asynchttpserver as http import nil
 
-import util
+import ./util
+
+type
+  Request* = ref object of RootObj
+    req*: http.Request
+    originalUrl*: string
 
 proc headers*(this: Request): HttpHeaders = return this.req.headers
 
@@ -46,21 +52,10 @@ proc hostname*(this: Request): string =
   return "hostname" # TODO
 
 proc origin*(this: Request): string =
-  return this.protocol & "://" & this.host
+  return this.protocol & "://" & this.host # TODO, maybe use Origin header instead
 
 proc href*(this: Request): string =
   return "href" # TODO
-
-proc fresh*(this: Request): bool =
-  # TODO: Test this
-  result = false
-  if [HttpGet, HttpHead].contains(this.method):
-    let s = Response(this).status
-    if (s >= 200 and s < 300) or s == 304:
-      return fresh(this.headers, Response(this).headers)
-
-proc stale*(this: Request): bool =
-  return not this.fresh
 
 proc idempotent*(this: Request): bool =
   return [HttpGet, HttpHead, HttpPut, HttpDelete, HttpOptions, HttpTrace].contains(this.method)

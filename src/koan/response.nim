@@ -6,8 +6,32 @@ import parseutils # parseInt
 import times
 import options
 export options.isNone, options.isSome, options.get
+import asyncfile # AsyncFile
+import asyncnet # AsyncSocket
+import uri # encodeUrl
 
-from util import getType
+import ./util
+import ./request
+import ./statuses
+
+export request
+export statuses
+
+type
+  BodyKind* = enum bkString, bkStream, bkAsyncFile
+  Body* = ref object
+    case kind*: BodyKind
+    of bkString: strVal*: string
+    of bkStream: streamVal*: Stream
+    of bkAsyncFile: asyncFileVal*: AsyncFile
+
+  Response* = ref object of Request
+    socket*: AsyncSocket
+    status*: HttpCode
+    headers*: HttpHeaders
+    message*: string
+    body: Body
+
 
 # Headers
 proc get*(this: Response, field: string): auto = return this.headers[field]
@@ -48,6 +72,8 @@ proc `type=`*(this: Response, value: string) =
 proc lastModified*(this: Response): Option[DateTime] =
   if this.has("Last-Modified"):
     return some(parseLastModified(this.get("Last-Modified")))
+  else:
+    return none(DateTime)
 proc `lastModified=`*(this: Response, lastmod: DateTime|Time) =
   this.set("Last-Modified", formatLastModified(lastmod))
 proc `lastModified=`*(this: Response, lastmod: type(nil)) =
@@ -68,3 +94,19 @@ proc `body=`*(this: Response, val: Stream) =
 proc `body=`*(this: Response, val: AsyncFile) =
   this.body = Body(kind: bkAsyncFile, asyncFileVal: val)
   this.length = getFileSize(val)
+
+proc redirect*(this: Response, url: string) =
+  this.set("Location", encodeUrl(url))
+  if not isRedirect(this.status):
+    this.status = Http302
+
+proc fresh*(this: Request): bool =
+  # TODO: Test this
+  result = false
+  if [HttpGet, HttpHead].contains(this.method):
+    let s = Response(this).status.int
+    if (s >= 200 and s < 300) or s == 304:
+      return fresh(this.headers, Response(this).headers)
+
+proc stale*(this: Request): bool =
+  return not this.fresh
