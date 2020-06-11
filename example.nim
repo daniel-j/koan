@@ -13,7 +13,7 @@ let myRouter = Router()
 
 # echo Http308
 
-myRouter.get("/", proc (ctx: Context) {.async.} =
+myRouter.get("/hello/:world", proc (ctx: Context) {.async.} =
   ctx.status = Http200
 
   # ctx.type= sets response content-type, in this case to text/html

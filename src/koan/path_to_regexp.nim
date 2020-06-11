@@ -2,6 +2,8 @@
 
 import regex
 import strutils
+import sequtils
+import tables
 
 type
   LexTokenType = enum ltOpen, ltClose, ltPattern, ltName, ltChar, ltEscapedChar, ltModifier, ltEnd
@@ -25,16 +27,18 @@ type
     delimiter*: string
     endsWith*: string
     encode*: proc (value: string): string
+    validate*: bool
 
 proc escapeString(str: string): string =
   return str.replace(re"([.+*?=^!:${}()[\]|/\\])", "\\$1")
 
 
-proc newOptions(): Options =
+proc newOptions*(): Options =
   result.strict = false
   result.start = true
   result.end = true
   result.encode = proc (value: string): string = value
+  result.validate = true
 
 proc lexer(str: string): seq[LexToken] =
   var i = 0
@@ -282,8 +286,35 @@ proc tokensToRegexp*(tokens: seq[Token], keys: ptr seq[Token] = nil, options: Op
   echo route
   return re((if not options.sensitive: "(?i)" else: "") & route)
 
+proc tokensToFunction*(tokens: seq[Token], options: Options = newOptions()): auto =
+  let matches = tokens.map(proc (token: Token): Regex =
+    if token.path.len == 0:
+      return re("^(?:" & token.pattern & ")$")
+  )
+  return proc (data: Table[string, string]): string =
+    for i, token in tokens:
+      if token.path.len != 0:
+        result.add(token.path)
+        continue
+      let value = data[token.name]
+      let optional = token.modifier == "?" or token.modifier == "*"
+      let repeat = token.modifier == "*" or token.modifier == "+"
+
+      let segment = options.encode(value)
+
+      if options.validate and not segment.match(matches[i]):
+        raise newException(CatchableError, "Expected " & token.name & " to match " & token.pattern & ", but got " & segment)
+
+      result.add(token.prefix & segment & token.suffix)
+      continue
+
+
+
 proc stringToRegexp(path: string, keys: ptr seq[Token] = nil, opts: Options = newOptions()): Regex =
   return tokensToRegexp(parse(path, opts), keys, opts)
 
 proc pathToRegexp*(path: string, keys: ptr seq[Token] = nil, opts: Options = newOptions()): Regex =
   return stringToRegexp(path, keys, opts)
+
+proc compile*(str: string, options: Options = newOptions()): auto =
+  return tokensToFunction(parse(str, options), options)

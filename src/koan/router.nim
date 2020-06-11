@@ -1,17 +1,20 @@
 import httpcore
 import tables
 import asyncdispatch
-import strutils
 import regex
-from uri import decodeUrl
+import uri
+import sequtils
 
 import ./middleware
 import ./path_to_regexp
 
 type
+  ParamsArg = openArray[(string, string)]
+  Params = Table[string, string]
+
   RouterContext* = ref object of Context
     captures*: seq[string]
-    params*: Table[string, string]
+    params*: Params
     routerName*: string
 
   ParamMiddleware = proc (name: string, ctx: Context): Middleware
@@ -55,10 +58,11 @@ proc newLayer(path: string, methods: seq[HttpMethod], middlewares: seq[Middlewar
   result.path = path
   result.regexp = pathToRegexp(path, result.paramNames.addr)
 
+
 proc match(this: Layer, path: string): bool = path.match(this.regexp)
 
-proc params(this: Layer, path: string, captures: seq[string], existingParams: Table[string, string] = initTable[string, string]()): Table[string, string] =
-  result = existingParams
+proc params(this: Layer, path: string, captures: seq[string], existingParams: ParamsArg = {:}): Params =
+  result = existingParams.toTable
   for i, c in captures:
     if i < this.paramNames.len:
       result[this.paramNames[i].name] = decodeUrl(c, false)
@@ -70,16 +74,40 @@ proc captures(this: Layer, path: string): seq[string] =
       for i in 0 ..< m.groupsCount():
         result.add(path[m.group(i)[0]])
 
+proc url*(this: Layer, params: ParamsArg, query: openArray[(string, string)] = {:}, options: path_to_regexp.Options = path_to_regexp.newOptions()): string =
+  let url = this.path.replace(re"\(\.\*\)", "")
+  let toPath = compile(url, options)
+
+  result = toPath(params.toTable)
+
+  if query.len != 0:
+    var replaced = parseUri(result)
+    replaced.query = encodeQuery(query)
+    result = $replaced
+
 proc param(this: Layer, param: string, fn: ParamMiddleware): Layer =
   result = this
-  let stack = this.stack
   let params = this.paramNames
-  # let middleware = proc (ctx: Context): auto = fn(ctx.params[param], ctx)
+  let middleware = proc (ctx: Context): Middleware =
+    return fn(RouterContext(ctx).params[param], ctx)
+
+  let names = params.map(proc (p: Token): string =
+    return p.name
+  )
+
+  let x = names.find(param)
+
+  if x > -1:
+    for i, fn in this.stack:
+      # TODO
+      discard
+
 
 proc register(this: Router, path: string, methods: seq[HttpMethod], middlewares: seq[Middleware], opts: LayerOptions = LayerOptions()): Router {.discardable.} =
   result = this
 
   let route = newLayer(path, methods, middlewares, opts)
+  echo route.url({"world": "1234", "0": "123"}, query={"hello": "world"})
   # echo "params: ", route.params("/hello/12%20+hello")
 
 template setMethodVerb(methodName: untyped, `method`: HttpMethod) =
